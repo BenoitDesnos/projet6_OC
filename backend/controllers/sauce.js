@@ -5,39 +5,44 @@ const { log } = require("console");
 exports.likeToggleSauce = (req, res, next) => {
   if (req.body.like == 1) {
     Sauce.updateOne(
-      // on filtre
+      // on filtre grace à l'id présent dans l'url
       { _id: req.params.id },
-      { $push: { usersLiked: req.body.userId }, $inc: { likes: req.body.like } }
+      // on ajoute l'userId dans le tableau des users ayant aimé && on incrémente le like dans la variable likes
+      { $push: { usersLiked: req.body.userId }, $inc: { likes: 1 } }
     )
       .then(() => res.status(200).json({ message: "objet liké" }))
       .catch((error) => res.status(401).json({ error }));
-  }
-  if (req.body.like == -1) {
+  } else if (req.body.like == -1) {
     Sauce.updateOne(
+      // on filtre grace à l'id présent dans l'url
       { _id: req.params.id },
+
       {
+        // on ajoute l'userId dans le tableau des users n'ayant pas aimé && on incrémente le dislike dans la variable dislikes
         $push: { usersDisliked: req.body.userId },
         $inc: { dislikes: 1 },
       }
     )
       .then(() => res.status(200).json({ message: "objet liké" }))
       .catch((error) => res.status(401).json({ error }));
-  }
-  if (req.body.like == 0) {
+  } else if (req.body.like == 0) {
+    // on recherche la sauce grace au filtre de l'id présent dans l'url && on récupère la data présente dans l'api correspondant à l'id
     Sauce.findOne({ _id: req.params.id }).then((sauce) => {
       log(sauce);
-      let usersThatLiked = false;
+      let isLikedByUser = false;
+      // si l'userId est présent dans le tableau usersliked alors on confirme que l'user avait liké la sauce en passant la variable islikedbyuser sur true
       for (i = 0; i < sauce.usersLiked.length; i++) {
         if (sauce.usersLiked[i] == req.body.userId) {
-          usersThatLiked = true;
+          isLikedByUser = true;
         }
       }
-      // si l'utilisateur n'a pas liké cela veut dire qu'il a disliké
-      if (usersThatLiked == false) {
+      // si l'utilisateur n'avait pas liké cela veut dire qu'il avait disliké
+      if (isLikedByUser == false) {
         Sauce.updateOne(
-          // pas besoin de filtre car déjà filtré dans findone()
-          {},
+          // on filtre
+          { _id: req.params.id },
           {
+            // on retire l'user du tableau des userdisliked && on décrémente les dislikes
             $pull: { usersDisliked: req.body.userId },
             $inc: { dislikes: -1 },
           }
@@ -46,8 +51,10 @@ exports.likeToggleSauce = (req, res, next) => {
           .catch((error) => res.status(400).json({ error }));
       } else {
         Sauce.updateOne(
-          {},
+          // on filtre
+          { _id: req.params.id },
           {
+            // on retire l'user du tableau des userliked && on décrémente les likes
             $pull: { usersLiked: req.body.userId },
             $inc: { likes: -1 },
           }
@@ -60,11 +67,15 @@ exports.likeToggleSauce = (req, res, next) => {
 };
 
 exports.createSauce = (req, res, next) => {
+  // On récupère la sauce présente dans le body et on la parse
   const sauceObject = JSON.parse(req.body.sauce);
+  log(sauceObject);
   // VOIR PK DELETE ID ET USERID
-  console.log(sauceObject);
+  // avec log aucun n'id de visible fait par la base de donnée
   delete sauceObject._id;
+  // ne pas faire confiance au client
   delete sauceObject._userId;
+  // en cours de compréhension
   const sauce = new Sauce({
     ...sauceObject,
     userId: req.auth.userId,
@@ -72,6 +83,9 @@ exports.createSauce = (req, res, next) => {
       req.file.filename
     }`,
   });
+  console.log(req.protocol);
+  console.log(req.get("host"));
+  console.log(req.file);
   console.log(sauce);
 
   sauce

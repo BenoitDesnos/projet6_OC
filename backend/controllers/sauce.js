@@ -23,12 +23,12 @@ exports.likeToggleSauce = (req, res, next) => {
         $inc: { dislikes: 1 },
       }
     )
-      .then(() => res.status(200).json({ message: "objet liké" }))
+      .then(() => res.status(200).json({ message: "objet disliké" }))
       .catch((error) => res.status(401).json({ error }));
+    // si req.body.like ==  0 alors le client avait liké ou disliké avant la requête
   } else if (req.body.like == 0) {
     // on recherche la sauce grace au filtre de l'id présent dans l'url && on récupère la data présente dans l'api correspondant à l'id
     Sauce.findOne({ _id: req.params.id }).then((sauce) => {
-      log(sauce);
       let isLikedByUser = false;
       // si l'userId est présent dans le tableau usersliked alors on confirme que l'user avait liké la sauce en passant la variable islikedbyuser sur true
       for (i = 0; i < sauce.usersLiked.length; i++) {
@@ -69,25 +69,23 @@ exports.likeToggleSauce = (req, res, next) => {
 exports.createSauce = (req, res, next) => {
   // On récupère la sauce présente dans le body et on la parse
   const sauceObject = JSON.parse(req.body.sauce);
-  log(sauceObject);
-  // VOIR PK DELETE ID ET USERID
+  // VOIR PK DELETE ID
   // avec log aucun n'id de visible fait par la base de donnée
   delete sauceObject._id;
-  // ne pas faire confiance au client
-  delete sauceObject._userId;
-  // en cours de compréhension
+  // ne pas faire confiance au client d'apres le cours il peut le modifier
+  delete sauceObject.userId;
+  //pk sauceObject.userId est vissible dans le log???
+  console.log(sauceObject);
+  // on crée une const sauce grace à sauceObject + on rajoute les champs manquant userId et imageUrl
   const sauce = new Sauce({
     ...sauceObject,
     userId: req.auth.userId,
+    // on utilise l'url créé avec multer
     imageUrl: `${req.protocol}://${req.get("host")}/images/${
       req.file.filename
     }`,
   });
-  console.log(req.protocol);
-  console.log(req.get("host"));
-  console.log(req.file);
-  console.log(sauce);
-
+  // on retourne et sauvegarde la sauce comme résultat dans l'api
   sauce
     .save()
     .then(() => {
@@ -99,35 +97,47 @@ exports.createSauce = (req, res, next) => {
 };
 
 exports.displayAllSauces = (req, res, next) => {
+  // find() permet de récuperer toutes les sauces dans l'api et des les envoyer au frontend
   Sauce.find()
     .then((sauces) => res.status(200).json(sauces))
     .catch((error) => res.status(400).json({ error }));
 };
 
 exports.displayOneSauce = (req, res, next) => {
+  // findOne() permet de récuperer une sauce dans l'api à l'aide du filtre et de l'envoyer au frontend
   Sauce.findOne({ _id: req.params.id })
     .then((sauce) => res.status(200).json(sauce))
     .catch((error) => res.status(404).json({ error }));
 };
 
 exports.modifySauce = (req, res, next) => {
+  // verifie si un file (image) est présent dans la requete
   const sauceObject = req.file
-    ? {
+    ? // si changement d'image l'objet renvoyé est un string
+      {
         ...JSON.parse(req.body.sauce),
         imageUrl: `${req.protocol}://${req.get("host")}/images/${
           req.file.filename
         }`,
       }
-    : { ...req.body };
+    : // si pas de changement d'image l'objet est renvoyé en respectant le schema
+      { ...req.body };
 
-  delete sauceObject._userId;
+  //on supprime l'userId pour des questions de sécurité
+  delete sauceObject.userId;
+  //meme question que pour createSauce, pk sauceObject.userId se log???
+  console.log(sauceObject);
+
   Sauce.findOne({ _id: req.params.id })
     .then((sauce) => {
+      // on vérifie si l'user à le droit d'effectuer la modification
       if (sauce.userId != req.auth.userId) {
         res.status(401).json({ message: "Not authorized" });
       } else {
         Sauce.updateOne(
           { _id: req.params.id },
+          // on update grace à sauceObject
+          // voir pk update ID???
           { ...sauceObject, _id: req.params.id }
         )
           .then(() => res.status(200).json({ message: "Objet modifié!" }))

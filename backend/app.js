@@ -4,6 +4,8 @@ const sauceRoutes = require("./routes/sauces");
 const userRoutes = require("./routes/user");
 const path = require("path");
 
+const app = express();
+
 mongoose
   .connect(
     "mongodb+srv://benoitdesnos66:oiV9pvrbXIcJedJ1@cluster0.929eox3.mongodb.net/?retryWrites=true&w=majority",
@@ -11,8 +13,6 @@ mongoose
   )
   .then(() => console.log("Connexion à MongoDB réussie !"))
   .catch(() => console.log("Connexion à MongoDB échouée !"));
-
-const app = express();
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -26,9 +26,9 @@ app.use((req, res, next) => {
   );
   next();
 });
-app.options("/*", (_, res) => {
+/* app.options("/*", (_, res) => {
   res.sendStatus(200);
-});
+}); */
 
 app.use(express.json());
 

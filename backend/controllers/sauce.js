@@ -66,46 +66,13 @@ exports.likeToggleSauce = (req, res, next) => {
   }
 };
 // < ------------------------------------------------------------------ DEUX FACON DE FAIRE ASYNC AWAIT ET .THEN------------------------------------------->
-/* exports.createSauce = (req, res, next) => {
-  // On récupère la sauce présente dans le body et on la parse
-  const sauceObject = JSON.parse(req.body.sauce);
-  // VOIR PK DELETE ID
-  // avec log aucun n'id de visible fait par la base de donnée
-  delete sauceObject._id;
-  // ne pas faire confiance au client d'apres le cours il peut le modifier
-  delete sauceObject.userId;
-  //pk sauceObject.userId est vissible dans le log???
-  console.log(sauceObject);
-  // on crée une const sauce grace à sauceObject + on rajoute les champs manquant userId et imageUrl
-  const sauce = new Sauce({
-    ...sauceObject,
-    userId: req.auth.userId,
-    // on utilise l'url créé avec multer
-    imageUrl: `${req.protocol}://${req.get("host")}/images/${
-      req.file.filename
-    }`,
-  });
-  // on retourne et sauvegarde la sauce comme résultat dans l'api
-  sauce
-    .save()
-    .then(() => {
-      res.status(201).json({ message: "Objet enregistré !" });
-    })
-    .catch((error) => {
-      res.status(400).json({ error });
-    });
-}; */
+
 exports.createSauce = async (req, res, next) => {
   // On récupère la sauce présente dans le body et on la parse
   const sauceObject = JSON.parse(req.body.sauce);
-  // VOIR PK DELETE ID
-  // avec log aucun n'id de visible fait par la base de donnée
-  delete sauceObject._id;
-  // ne pas faire confiance au client d'apres le cours il peut le modifier
+  // ne pas faire confiance au client
   delete sauceObject.userId;
-  //pk sauceObject.userId est vissible dans le log???
-  console.log(sauceObject);
-  // on crée une const sauce grace à sauceObject + on rajoute les champs manquant userId et imageUrl
+  // on créé une const sauce grace à sauceObject + on rajoute les champs manquant userId et imageUrl, _id est créé par mongoose.
   const sauce = new Sauce({
     ...sauceObject,
     userId: req.auth.userId,
@@ -114,11 +81,10 @@ exports.createSauce = async (req, res, next) => {
       req.file.filename
     }`,
   });
-  // on retourne et sauvegarde la sauce comme résultat dans l'api
+  // on sauvegarde la sauce comme résultat dans l'api
   try {
-    const newSauce = await sauce.save();
-    res.status(201).json(newSauce);
-    res.json();
+    sauce.save();
+    res.status(201).json({ message: "Sauce enregistrée !" });
   } catch (error) {
     res.status(400).json({ error });
   }
@@ -156,9 +122,6 @@ exports.modifySauce = (req, res, next) => {
   //on supprime l'userId pour des questions de sécurité
   delete sauceObject.userId;
 
-  console.log(sauceObject);
-  console.log(req.body);
-
   Sauce.findOne({ _id: req.params.id })
     .then((sauce) => {
       // on vérifie si l'user à le droit d'effectuer la modification
@@ -168,9 +131,7 @@ exports.modifySauce = (req, res, next) => {
         Sauce.updateOne(
           { _id: req.params.id },
           // on update les objets présent dans sauceObject
-          // voir pk update ID??? on trouve la sauce grace à l'id, pourquoi le mettre à jour avec le meme id?
-          /*   https://openclassrooms.com/fr/courses/6390246-passez-au-full-stack-avec-node-js-express-et-mongodb/6466669-modifiez-les-routes-pour-prendre-en-compte-les-fichiers#/id/r-7905564 */
-          { ...sauceObject /* _id: req.params.id */ }
+          { ...sauceObject }
         )
           .then(() => res.status(200).json({ message: "Objet modifié!" }))
           /*  .then((data) => {
@@ -190,11 +151,16 @@ exports.deleteSauce = (req, res, next) => {
   // on filtre la sauce grace à l'id de l'url
   Sauce.findOne({ _id: req.params.id })
     .then((sauce) => {
+      // on verifie s'il s'agit bien du bon user
       if (sauce.userId != req.auth.userId) {
         res.status(401).json({ message: "Not authorized" });
       } else {
+        //si il s'agit du bon user, on récupère le nom de l'image grace à split()
         const filename = sauce.imageUrl.split("/images/")[1];
+        console.log(filename);
+        // on supprime l'image de repository images/ gràce à fs
         fs.unlink(`images/${filename}`, () => {
+          // on supprime la sauce de l'api grace à deleteOne()
           Sauce.deleteOne({ _id: req.params.id })
             .then(() => {
               res.status(200).json({ message: "Objet supprimé !" });

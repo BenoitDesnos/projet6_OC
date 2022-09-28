@@ -43,6 +43,7 @@ exports.createSauce = async (req, res, next) => {
 exports.modifySauce = (req, res, next) => {
   let newImage = false;
   let sauceObject = {};
+  console.log("test");
 
   // verifie si un file (image) est présent dans la requete
   if (req.file) {

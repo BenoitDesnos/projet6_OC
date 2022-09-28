@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 
 module.exports = (req, res, next) => {
   try {
-    // on récupère le token
+    // on récupère le token on split bearer avec le token
     const token = req.headers.authorization.split(" ")[1];
     // on décode le token grace à verify
     const decodedToken = jwt.verify(token, "RANDOM_TOKEN_SECRET");

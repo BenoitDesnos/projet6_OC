@@ -5,6 +5,8 @@ const jwt = require("jsonwebtoken");
 
 const User = require("../models/User");
 
+require("dotenv").config();
+
 exports.signup = (req, res, next) => {
   bcrypt
     //methode asynchrone qui hash le mdp
@@ -47,7 +49,7 @@ exports.login = (req, res, next) => {
             res.status(200).json({
               userId: user._id,
               // encode l'userId
-              token: jwt.sign({ userId: user._id }, "RANDOM_TOKEN_SECRET", {
+              token: jwt.sign({ userId: user._id }, process.env.TOKEN, {
                 expiresIn: "24h",
               }),
             });
